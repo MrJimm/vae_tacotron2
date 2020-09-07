@@ -8,7 +8,7 @@ import time
 from tqdm import tqdm
 from tacotron.utils.audio import load_wav, melspectrogram
 
-def run_eval(args, checkpoint_path, output_dir):
+def run_eval(args, checkpoint_path, output_dir, sentences):
 	print(hparams_debug_string())
 	synth = Synthesizer()
 	synth.load(checkpoint_path)
@@ -23,7 +23,7 @@ def run_eval(args, checkpoint_path, output_dir):
 	os.makedirs(os.path.join(log_dir, 'plots'), exist_ok=True)
 
 	with open(os.path.join(eval_dir, 'map.txt'), 'w') as file:
-		for i, text in enumerate(tqdm(hparams.sentences)):
+		for i, text in enumerate(tqdm(sentences)):
 			start = time.time()
 			mel_filename = synth.synthesize(text, i+1, eval_dir, log_dir, None, reference_mel)
 
@@ -67,6 +67,12 @@ def tacotron_synthesize(args):
 	os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 	output_dir = 'tacotron_' + args.output_dir
 
+	if args.text_list != '':
+		with open(args.text_list, 'rb') as f:
+			sentences = list(map(lambda l: l.decode("utf-8")[:-1], f.readlines()))
+	else:
+		sentences = hparams.sentences
+
 	try:
 		checkpoint_path = tf.train.get_checkpoint_state(args.checkpoint).model_checkpoint_path
 		print('loaded model at {}'.format(checkpoint_path))
@@ -74,6 +80,6 @@ def tacotron_synthesize(args):
 		raise AssertionError('Cannot restore checkpoint: {}, did you train a model?'.format(args.checkpoint))
 
 	if args.mode == 'eval':
-		run_eval(args, checkpoint_path, output_dir)
+		run_eval(args, checkpoint_path, output_dir, sentences)
 	else:
 		run_synthesis(args, checkpoint_path, output_dir)
