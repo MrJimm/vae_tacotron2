@@ -44,6 +44,10 @@ class Synthesizer:
 
 
 	def synthesize(self, text, index, out_dir, log_dir, mel_filename, reference_mel):
+		print('')
+		print('self.gta', self.gta)
+		print('hparams.use_vae', hparams.use_vae)
+		print('')
 		cleaner_names = [x.strip() for x in hparams.cleaners.split(',')]
 		seq = text_to_sequence(text, cleaner_names)
 		feed_dict = {

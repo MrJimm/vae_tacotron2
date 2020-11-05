@@ -1,0 +1,9 @@
+python train.py --model='Tacotron' --base_dir='datasets'
+
+python synthesize.py --model='Tacotron' --mode='eval' --reference_audio='/home/surrogate/Downloads/kid_small.wav' --checkpoint='datasets/logs-Tacotron/pretrained/' --text_list='/home/surrogate/Downloads/humpty.txt'\
+
+python synthesize.py --model='Tacotron' --mode='eval' --reference_audio='/home/surrogate/Downloads/kid_small.wav' --checkpoint='datasets/logs-Tacotron/pretrained/'
+
+python synthesize.py --model='Tacotron' --mode='synthesis' --reference_audio='/home/surrogate/Downloads/kid_small.wav' --checkpoint='datasets/logs-Tacotron/pretrained/' --input_dir='datasets/training_data/'
+
+python synthesize.py --model='Tacotron' --mode='synthesis' --reference_audio='/home/surrogate/Downloads/kid_small.wav' --checkpoint='datasets/logs-Tacotron/pretrained/' --input_dir='datasets/training_data/' --text_list='/home/surrogate/Downloads/humpty.txt'

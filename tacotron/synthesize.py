@@ -7,6 +7,8 @@ import tensorflow as tf
 import time
 from tqdm import tqdm
 from tacotron.utils.audio import load_wav, melspectrogram
+import numpy as np
+from datasets import audio
 
 def run_eval(args, checkpoint_path, output_dir, sentences):
 	print(hparams_debug_string())
@@ -30,11 +32,15 @@ def run_eval(args, checkpoint_path, output_dir, sentences):
 			file.write('{}|{}\n'.format(text, mel_filename))
 	print('synthesized mel spectrograms at {}'.format(eval_dir))
 
-def run_synthesis(args, checkpoint_path, output_dir):
+def run_synthesis(args, checkpoint_path, output_dir, sentences):
 	metadata_filename = os.path.join(args.input_dir, 'train.txt')
 	print(hparams_debug_string())
 	synth = Synthesizer()
 	synth.load(checkpoint_path, gta=args.GTA)
+
+	wav = load_wav(args.reference_audio)
+	reference_mel = melspectrogram(wav).transpose()
+
 	with open(metadata_filename, encoding='utf-8') as f:
 		metadata = [line.strip().split('|') for line in f]
 		frame_shift_ms = hparams.hop_size / hparams.sample_rate
@@ -48,18 +54,28 @@ def run_synthesis(args, checkpoint_path, output_dir):
 
 	#Create output path if it doesn't exist
 	os.makedirs(synth_dir, exist_ok=True)
+	os.makedirs(os.path.join(synth_dir, 'wavs/'), exist_ok=True)
 
 	print('starting synthesis')
-	mel_dir = os.path.join(args.input_dir, 'mels')
-	wav_dir = os.path.join(args.input_dir, 'audio')
 	with open(os.path.join(synth_dir, 'map.txt'), 'w') as file:
-		for i, meta in enumerate(tqdm(metadata)):
-			text = meta[5]
-			mel_filename = os.path.join(mel_dir, meta[1])
-			wav_filename = os.path.join(wav_dir, meta[0])
-			mel_output_filename = synth.synthesize(text, None, i+1, synth_dir, None, mel_filename)
+		#for i, meta in enumerate(tqdm(metadata)):
+			#text = meta[5]
+		for i, text in enumerate(tqdm(sentences)):
+			mel_output_filename = synth.synthesize(text=text, index=i+1, out_dir=synth_dir, log_dir=None, mel_filename=None, reference_mel=reference_mel)
 
-			file.write('{}|{}|{}|{}\n'.format(text, mel_filename, mel_output_filename, wav_filename))
+			mels = np.load(mel_output_filename)
+			wav = audio.inv_mel_spectrogram(mels.T)
+			audio.save_wav(wav, os.path.join(synth_dir, 'wavs/speech-wav-{:05d}-mel.wav'.format(i+1)))
+
+			with open(os.path.join(synth_dir, 'wavs/speech-wav-{:05d}.txt'.format(i+1)), 'w') as tf:
+				tf.write(text)
+
+			if hparams.predict_linear:
+				# save wav (linear -> wav)
+				wav = audio.inv_linear_spectrogram(linear.T)
+				audio.save_wav(wav, os.path.join(synth_dir, 'wavs/speech-wav-{:05d}-linear.wav'.format(i+1)))
+
+		#file.write('{}|{}|{}|{}\n'.format(text, mel_filename, mel_output_filename, wav_filename))
 	print('synthesized mel spectrograms at {}'.format(synth_dir))
 
 def tacotron_synthesize(args):
@@ -82,4 +98,4 @@ def tacotron_synthesize(args):
 	if args.mode == 'eval':
 		run_eval(args, checkpoint_path, output_dir, sentences)
 	else:
-		run_synthesis(args, checkpoint_path, output_dir)
+		run_synthesis(args, checkpoint_path, output_dir, sentences)
